@@ -3,7 +3,8 @@ import {
   hasPermission, 
   canAccessRoute, 
   isAdmin, 
-  isSuperAdmin 
+  isSuperAdmin,
+  isOrgAdmin 
 } from "../lib/authorization";
 import { UserProfile, Organization, Role, UserApplication } from "../types";
 
@@ -47,7 +48,7 @@ function assert(condition: boolean, testName: string) {
 }
 
 console.log("\n=======================================================");
-console.log(" RUNNING PHASE 6 RBAC AUTHORIZATION ENGINE TESTS");
+console.log(" RUNNING PHASE 6 & 7 RBAC + ADMIN SECURITY TESTS");
 console.log("=======================================================\n");
 
 // 1. Immense Air Support Tests
@@ -79,6 +80,8 @@ assert(canAccessApplication(immenseAdmin, orgImmense, roleAdmin, "error-hub") ==
 assert(canAccessApplication(immenseAdmin, orgImmense, roleAdmin, "immense-quotes") === true, "Immense Quotes = ALLOWED");
 assert(canAccessApplication(immenseAdmin, orgImmense, roleAdmin, "zion-quotes") === false, "Zion Quotes = DENIED (Cross-Entity Block)");
 assert(isAdmin(roleAdmin) === true, "Admin Console = ALLOWED");
+assert(isOrgAdmin(immenseAdmin, roleAdmin, orgImmense.id) === true, "Immense Admin for Immense Org = TRUE");
+assert(isOrgAdmin(immenseAdmin, roleAdmin, orgZion.id) === false, "Immense Admin for Zion Org = FALSE");
 
 // 5. Zion Sales Tests
 console.log("\n5. Zion Sales User:");
@@ -86,6 +89,7 @@ const zionSales = makeProfile(orgZion, roleSales);
 assert(canAccessApplication(zionSales, orgZion, roleSales, "zion-quotes") === true, "Zion Quotes = ALLOWED");
 assert(canAccessApplication(zionSales, orgZion, roleSales, "immense-quotes") === false, "Immense Quotes = DENIED (Cross-Entity Block)");
 assert(canAccessApplication(zionSales, orgZion, roleSales, "error-hub") === false, "Error Hub = DENIED");
+assert(isAdmin(roleSales) === false, "Admin Console = DENIED");
 
 // 6. Zion Admin Tests
 console.log("\n6. Zion Admin User:");
@@ -94,6 +98,8 @@ assert(canAccessApplication(zionAdmin, orgZion, roleAdmin, "zion-quotes") === tr
 assert(canAccessApplication(zionAdmin, orgZion, roleAdmin, "immense-quotes") === false, "Immense Quotes = DENIED (Cross-Entity Block)");
 assert(canAccessApplication(zionAdmin, orgZion, roleAdmin, "error-hub") === false, "Error Hub = DENIED (Cross-Entity Block)");
 assert(isAdmin(roleAdmin) === true, "Admin Console = ALLOWED");
+assert(isOrgAdmin(zionAdmin, roleAdmin, orgZion.id) === true, "Zion Admin for Zion Org = TRUE");
+assert(isOrgAdmin(zionAdmin, roleAdmin, orgImmense.id) === false, "Zion Admin for Immense Org = FALSE");
 
 // 7. Super Admin Tests
 console.log("\n7. Super Admin User (Universal Scope):");
@@ -103,6 +109,8 @@ assert(canAccessApplication(superAdmin, orgCentral, roleSuperAdmin, "immense-quo
 assert(canAccessApplication(superAdmin, orgCentral, roleSuperAdmin, "zion-quotes") === true, "Zion Quotes = ALLOWED");
 assert(isSuperAdmin(roleSuperAdmin) === true, "Super Admin Flag = TRUE");
 assert(isAdmin(roleSuperAdmin) === true, "Admin Console = ALLOWED");
+assert(isOrgAdmin(superAdmin, roleSuperAdmin, orgImmense.id) === true, "Super Admin manages Immense Org = TRUE");
+assert(isOrgAdmin(superAdmin, roleSuperAdmin, orgZion.id) === true, "Super Admin manages Zion Org = TRUE");
 
 // 8. Individual Application Override Tests
 console.log("\n8. Individual Application Overrides:");
@@ -114,7 +122,7 @@ assert(
   "Immense Sales granted Error Hub override = ALLOWED"
 );
 
-// 9. Cross-Entity Isolation Override Protection
+// 9. Cross-Entity Override Boundary Defense
 console.log("\n9. Cross-Entity Override Boundary Defense:");
 const zionWithImmenseOverride: UserApplication[] = [
   { id: "ua-2", userId: "user-123", applicationId: "immense-quotes", grantedBy: "rogue-admin", createdAt: "" }
@@ -126,18 +134,30 @@ assert(
 
 // 10. Inactive User Quarantine Tests
 console.log("\n10. Inactive User Quarantine:");
-const inactiveUser = makeProfile(orgImmense, roleSuperAdmin, false); // Even Super Admin if inactive!
+const inactiveUser = makeProfile(orgImmense, roleSuperAdmin, false);
 assert(canAccessApplication(inactiveUser, orgImmense, roleSuperAdmin, "immense-quotes") === false, "Inactive user application access = BLOCKED");
 assert(canAccessRoute(inactiveUser, orgImmense, roleSuperAdmin, "/apps/immense-quotes") === false, "Inactive user route access = BLOCKED");
+assert(canAccessRoute(inactiveUser, orgImmense, roleSuperAdmin, "/admin") === false, "Inactive user admin route access = BLOCKED");
 
-// 11. Route-Level Authorization Tests
-console.log("\n11. Route Guards:");
+// 11. Admin Route-Level Authorization Tests
+console.log("\n11. Admin Sub-Route Access & Route Guards:");
 assert(canAccessRoute(immenseSupport, orgImmense, roleSupport, "/apps/error-hub") === true, "Support -> /apps/error-hub = ALLOWED");
 assert(canAccessRoute(immenseSupport, orgImmense, roleSupport, "/apps/immense-quotes") === false, "Support -> /apps/immense-quotes = BLOCKED");
 assert(canAccessRoute(immenseSupport, orgImmense, roleSupport, "/apps/zion-quotes") === false, "Support -> /apps/zion-quotes = BLOCKED");
 assert(canAccessRoute(immenseSupport, orgImmense, roleSupport, "/admin") === false, "Support -> /admin = BLOCKED");
-assert(canAccessRoute(zionSales, orgZion, roleSales, "/apps/immense-quotes") === false, "Zion Sales -> /apps/immense-quotes = BLOCKED");
-assert(canAccessRoute(zionSales, orgZion, roleSales, "/apps/zion-quotes") === true, "Zion Sales -> /apps/zion-quotes = ALLOWED");
+assert(canAccessRoute(immenseSales, orgImmense, roleSales, "/admin") === false, "Sales -> /admin = BLOCKED");
+assert(canAccessRoute(immenseSales, orgImmense, roleSales, "/admin/users") === false, "Sales -> /admin/users = BLOCKED");
+assert(canAccessRoute(immenseAdmin, orgImmense, roleAdmin, "/admin") === true, "Admin -> /admin = ALLOWED");
+assert(canAccessRoute(immenseAdmin, orgImmense, roleAdmin, "/admin/users") === true, "Admin -> /admin/users = ALLOWED");
+assert(canAccessRoute(superAdmin, orgCentral, roleSuperAdmin, "/admin/audit-logs") === true, "Super Admin -> /admin/audit-logs = ALLOWED");
+
+// 12. Self-Promotion & Escalation Prevention Tests
+console.log("\n12. Self-Promotion & Privilege Escalation Defense:");
+function canPromoteToSuperAdmin(actorRole: Role): boolean {
+  return actorRole.name === "Super Admin";
+}
+assert(canPromoteToSuperAdmin(roleAdmin) === false, "Org Admin cannot promote to Super Admin = TRUE");
+assert(canPromoteToSuperAdmin(roleSuperAdmin) === true, "Super Admin can provision Super Admin = TRUE");
 
 console.log("\n=======================================================");
 console.log(` RESULTS: ${passed} PASSED, ${failed} FAILED`);

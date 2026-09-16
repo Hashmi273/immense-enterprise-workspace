@@ -4,7 +4,13 @@ import { Login } from "@/pages/auth/Login";
 import { ResetPassword } from "@/pages/auth/ResetPassword";
 import { AccessDenied } from "@/pages/auth/AccessDenied";
 import { Launcher } from "@/pages/workspace/Launcher";
+import { AdminLayout } from "@/layouts/AdminLayout";
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
+import { UsersPage } from "@/pages/admin/UsersPage";
+import { ApplicationsPage } from "@/pages/admin/ApplicationsPage";
+import { RolesPage } from "@/pages/admin/RolesPage";
+import { OrganizationsPage } from "@/pages/admin/OrganizationsPage";
+import { AuditLogsPage } from "@/pages/admin/AuditLogsPage";
 import { ErrorHubPlaceholder } from "@/pages/apps/ErrorHubPlaceholder";
 import { ImmenseQuotesPlaceholder } from "@/pages/apps/ImmenseQuotesPlaceholder";
 import { ZionQuotesPlaceholder } from "@/pages/apps/ZionQuotesPlaceholder";
@@ -37,15 +43,22 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Admin Console Route (Admin & Super Admin only) */}
+      {/* Admin Console Nested Routes (Admin & Super Admin only) */}
       <Route
         path="/admin"
         element={
           <AuthorizedRoute adminOnly>
-            <AdminDashboard />
+            <AdminLayout />
           </AuthorizedRoute>
         }
-      />
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="apps" element={<ApplicationsPage />} />
+        <Route path="roles" element={<RolesPage />} />
+        <Route path="organizations" element={<OrganizationsPage />} />
+        <Route path="audit-logs" element={<AuditLogsPage />} />
+      </Route>
 
       {/* Authorized Application Routes (Enforcing RBAC + Org Boundaries) */}
       <Route
