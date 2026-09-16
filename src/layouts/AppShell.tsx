@@ -13,7 +13,8 @@ import {
   FileText, 
   AlertOctagon,
   User,
-  LogIn
+  LogIn,
+  ChevronDown
 } from "lucide-react";
 
 interface AppShellProps {
@@ -22,6 +23,7 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, organization, role, isAdmin, canAccessApp, signOut } = useAuth();
@@ -33,11 +35,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   }
 
   const handleLogout = async () => {
+    setUserDropdownOpen(false);
     await signOut();
     navigate("/login");
   };
 
-  // Dynamically assemble navigation items based on user's authorized access
+  // Dynamically assemble navigation items based strictly on user's authorized access
   const navItems: Array<{ name: string; path: string; icon: any }> = [
     { name: "Workspace", path: "/workspace", icon: LayoutGrid },
   ];
@@ -85,12 +88,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <nav className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
+                const isActive = location.pathname === item.path || (item.path === "/admin" && location.pathname.startsWith("/admin"));
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                       isActive
                         ? "bg-brand-blue text-white shadow-sm"
                         : "text-slate-300 hover:text-white hover:bg-white/5"
@@ -103,41 +106,84 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               })}
             </nav>
 
-            {/* Right User & Controls */}
+            {/* Right User Controls & Profile */}
             <div className="hidden md:flex items-center space-x-3">
               <Link
                 to="/access-denied"
                 title="Test Access Denied Screen"
-                className="text-xs text-slate-400 hover:text-rose-300 flex items-center space-x-1 px-2 py-1 rounded bg-white/5 border border-white/10"
+                className="text-xs text-slate-400 hover:text-rose-300 flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 transition-colors"
               >
                 <AlertOctagon className="w-3.5 h-3.5" />
                 <span>Test 403</span>
               </Link>
 
               {user && profile ? (
-                <div className="flex items-center space-x-3 pl-2 border-l border-white/10">
-                  <div className="text-right leading-tight">
-                    <div className="text-xs font-bold text-white truncate max-w-[140px]">
-                      {profile.fullName || user.email}
-                    </div>
-                    <div className="flex items-center justify-end space-x-1 mt-0.5">
-                      <span className="text-[10px] text-brand-cyan font-medium">
-                        {organization?.name || "Immense"}
-                      </span>
-                      <span className="text-[9px] bg-white/10 text-slate-300 px-1.5 py-0.2 rounded">
-                        {role?.name || "User"}
-                      </span>
-                    </div>
-                  </div>
-
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={handleLogout}
-                    title="Sign Out"
-                    className="p-2 rounded-lg text-slate-300 hover:text-rose-300 hover:bg-white/10 transition-colors"
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center space-x-2.5 pl-2.5 pr-2 py-1.5 rounded-xl hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 text-left"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center text-brand-navy font-bold text-xs">
+                      {profile.fullName ? profile.fullName.charAt(0).toUpperCase() : "U"}
+                    </div>
+                    <div className="leading-tight">
+                      <div className="text-xs font-bold text-white truncate max-w-[130px]">
+                        {profile.fullName || user.email}
+                      </div>
+                      <div className="text-[10px] text-brand-cyan font-medium">
+                        {organization?.name || "Immense"} &middot; {role?.name}
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${userDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
+
+                  {/* Dropdown Menu */}
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-glow border border-slate-200 py-2 text-xs text-brand-navy z-50 animate-fade-in">
+                      <div className="px-4 py-2 border-b border-slate-100">
+                        <div className="font-bold text-sm text-brand-navy truncate">{profile.fullName}</div>
+                        <div className="text-[11px] text-slate-400 truncate">{profile.email}</div>
+                        <div className="mt-1.5 inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-blue-50 text-brand-blue text-[10px] font-semibold border border-blue-200/60">
+                          <span>{organization?.name}</span>
+                          <span>&bull;</span>
+                          <span>{role?.name}</span>
+                        </div>
+                      </div>
+
+                      <div className="py-1">
+                        <Link
+                          to="/workspace"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center space-x-2 px-4 py-2 hover:bg-slate-50 text-slate-700"
+                        >
+                          <LayoutGrid className="w-3.5 h-3.5 text-slate-400" />
+                          <span>My Workspace</span>
+                        </Link>
+                        {isAdmin && (
+                          <Link
+                            to="/admin"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center space-x-2 px-4 py-2 hover:bg-slate-50 text-slate-700"
+                          >
+                            <Settings className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Admin Console</span>
+                          </Link>
+                        )}
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full flex items-center space-x-2 px-4 py-2 text-rose-600 hover:bg-rose-50 text-left font-medium"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Link
@@ -164,13 +210,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           </div>
         </div>
 
-        {/* Mobile menu dropdown */}
+        {/* Mobile menu drawer */}
         {mobileMenuOpen && (
           <div className="md:hidden px-4 pt-2 pb-4 space-y-2 bg-brand-navy border-t border-white/10">
             {user && profile && (
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center space-x-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-brand-blue flex items-center justify-center text-white">
-                  <User className="w-4 h-4" />
+              <div className="p-3 bg-white/5 rounded-2xl border border-white/10 flex items-center space-x-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-brand-blue flex items-center justify-center text-white font-bold">
+                  {profile.fullName ? profile.fullName.charAt(0) : "U"}
                 </div>
                 <div className="text-xs">
                   <div className="font-bold text-white">{profile.fullName}</div>
@@ -239,7 +285,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <div className="flex items-center space-x-4 text-slate-400">
             <span>Immense Air Pvt Ltd &middot; Zion</span>
             <span>&bull;</span>
-            <span className="text-brand-blue font-medium">Phase 6: RBAC & Permission Engine Active</span>
+            <span className="text-brand-blue font-medium">Phase 8: Direct URL Protected & Polished Launcher</span>
           </div>
         </div>
       </footer>

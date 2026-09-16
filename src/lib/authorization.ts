@@ -5,12 +5,49 @@ import { UserProfile, Organization, Role, AppSlug, UserApplication } from "@/typ
  * 1. Supabase Auth Identity (User must be authenticated)
  * 2. Database Profile (Profile record must exist)
  * 3. Active Status (profiles.is_active must be true)
- * 4. Organization Boundary (Entity isolation: Zion != Immense Air)
- * 5. Role Defaults (Super Admin, Admin, Sales, Support, Operations)
- * 6. Individual Application Overrides (user_applications within entity boundary)
- * 7. Granular Permissions (role_permissions)
- * 8. PostgreSQL Row Level Security (Ultimate database-level enforcement)
+ * 4. Application Active Status (applications.is_active must be true, unless Super Admin)
+ * 5. Organization Boundary (Strict Entity Isolation: Zion != Immense Air)
+ * 6. Role Defaults (Super Admin, Admin, Sales, Support, Operations)
+ * 7. Individual Application Overrides (user_applications within entity boundary)
+ * 8. Granular Permissions (role_permissions)
+ * 9. PostgreSQL Row Level Security (Ultimate database-level enforcement)
  */
+
+export interface AppRegistryItem {
+  slug: AppSlug;
+  name: string;
+  organizationSlug: string;
+  category: string;
+  route: string;
+  isActive: boolean;
+}
+
+export const REGISTERED_APPLICATIONS: Record<AppSlug, AppRegistryItem> = {
+  "error-hub": {
+    slug: "error-hub",
+    name: "Error Code Intelligence Hub",
+    organizationSlug: "immense-air",
+    category: "Technical / Support",
+    route: "/apps/error-hub",
+    isActive: true,
+  },
+  "immense-quotes": {
+    slug: "immense-quotes",
+    name: "Immense Air Quotation Manager",
+    organizationSlug: "immense-air",
+    category: "Sales / Quotations",
+    route: "/apps/immense-quotes",
+    isActive: true,
+  },
+  "zion-quotes": {
+    slug: "zion-quotes",
+    name: "Zion Quotation Manager",
+    organizationSlug: "zion",
+    category: "Sales / Quotations",
+    route: "/apps/zion-quotes",
+    isActive: true,
+  },
+};
 
 export const APPLICATION_ORGANIZATIONS: Record<AppSlug, string> = {
   "error-hub": "immense-air",
@@ -51,6 +88,7 @@ export function isOrgAdmin(
  * Evaluates whether a user can access a specific application.
  * Enforces organization boundaries strictly:
  * A Zion user can NEVER access Immense Air applications, even if an override is erroneously assigned.
+ * Inactive applications are blocked for all non-Super Admin users.
  */
 export function canAccessApplication(
   profile: UserProfile | null | undefined,
@@ -58,10 +96,20 @@ export function canAccessApplication(
   role: Role | null | undefined,
   appSlug: AppSlug,
   userApplications: UserApplication[] = [],
-  permissions: string[] = []
+  permissions: string[] = [],
+  appRegistry = REGISTERED_APPLICATIONS
 ): boolean {
   // 1, 2, 3: Must be active and hold profile
   if (!profile || !profile.isActive || !organization || !role) {
+    return false;
+  }
+
+  // Check Application Active Status
+  const appItem = appRegistry[appSlug];
+  if (!appItem) return false;
+  
+  // If application is inactive, only Super Admin can inspect it
+  if (!appItem.isActive && role.name !== "Super Admin") {
     return false;
   }
 
@@ -70,8 +118,7 @@ export function canAccessApplication(
     return true;
   }
 
-  const appOrgSlug = APPLICATION_ORGANIZATIONS[appSlug];
-  if (!appOrgSlug) return false;
+  const appOrgSlug = appItem.organizationSlug;
 
   // 4. Strict Organization Boundary Check
   // Zion users cannot access Immense Air apps; Immense Air users cannot access Zion apps
@@ -81,7 +128,6 @@ export function canAccessApplication(
 
   // 5. Check individual user application overrides (within the permitted organization)
   const hasUserOverride = userApplications.some((ua) => {
-    // Overrides can only apply if the application matches the organization
     return ua.applicationId === appSlug || (ua as any).appSlug === appSlug;
   });
   if (hasUserOverride) {
@@ -91,22 +137,18 @@ export function canAccessApplication(
   // 6. Role Defaults Evaluation:
   if (organization.slug === "immense-air") {
     if (role.name === "Admin") {
-      // Immense Admin gets both Immense apps
       return appSlug === "error-hub" || appSlug === "immense-quotes";
     }
     if (role.name === "Support" || role.name === "Operations") {
-      // Support and Ops get Error Hub
       return appSlug === "error-hub";
     }
     if (role.name === "Sales") {
-      // Immense Sales gets Immense Quotations
       return appSlug === "immense-quotes";
     }
   }
 
   if (organization.slug === "zion") {
     if (role.name === "Admin" || role.name === "Sales") {
-      // Zion Admin and Zion Sales get Zion Quotations
       return appSlug === "zion-quotes";
     }
   }
@@ -148,7 +190,8 @@ export function canAccessRoute(
   role: Role | null | undefined,
   routePath: string,
   userApplications: UserApplication[] = [],
-  permissions: string[] = []
+  permissions: string[] = [],
+  appRegistry = REGISTERED_APPLICATIONS
 ): boolean {
   if (!profile || !profile.isActive || !role) return false;
 
@@ -158,19 +201,19 @@ export function canAccessRoute(
   }
 
   // Admin Console routes
-  if (routePath.startsWith("/admin")) {
+  if (routePath === "/admin" || routePath.startsWith("/admin/")) {
     return isAdmin(role);
   }
 
   // Application routes
   if (routePath === "/apps/error-hub") {
-    return canAccessApplication(profile, organization, role, "error-hub", userApplications, permissions);
+    return canAccessApplication(profile, organization, role, "error-hub", userApplications, permissions, appRegistry);
   }
   if (routePath === "/apps/immense-quotes") {
-    return canAccessApplication(profile, organization, role, "immense-quotes", userApplications, permissions);
+    return canAccessApplication(profile, organization, role, "immense-quotes", userApplications, permissions, appRegistry);
   }
   if (routePath === "/apps/zion-quotes") {
-    return canAccessApplication(profile, organization, role, "zion-quotes", userApplications, permissions);
+    return canAccessApplication(profile, organization, role, "zion-quotes", userApplications, permissions, appRegistry);
   }
 
   return false;
