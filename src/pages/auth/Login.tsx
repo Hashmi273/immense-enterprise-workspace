@@ -1,14 +1,75 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { ShieldCheck, Lock, Mail, ArrowRight, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { 
+  ShieldCheck, 
+  Lock, 
+  Mail, 
+  ArrowRight, 
+  Eye, 
+  EyeOff, 
+  AlertCircle, 
+  Loader2,
+  CheckCircle2,
+  Info
+} from "lucide-react";
 
 export const Login: React.FC = () => {
+  const { signIn, accountDisabledError, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    (location.state as any)?.error || accountDisabledError || null
+  );
+
+  // If user is already authenticated, redirect to workspace
+  React.useEffect(() => {
+    if (user) {
+      const destination = (location.state as any)?.from?.pathname || "/workspace";
+      navigate(destination, { replace: true });
+    }
+  }, [user, navigate, location]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (!email.trim() || !password) {
+      setErrorMessage("Please enter both your work email and password.");
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      setErrorMessage(
+        "Supabase credentials are not yet configured in .env. Please provide VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await signIn(email, password);
+
+    if (error) {
+      setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
+      setSubmitting(false);
+    } else {
+      const destination = (location.state as any)?.from?.pathname || "/workspace";
+      navigate(destination, { replace: true });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-gradient-to-br from-brand-canvas via-white to-sky-50">
       <div className="w-full max-w-md">
-        {/* Logo Card Header */}
+        {/* Header Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-navy shadow-glow mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-navy shadow-glow mb-4 transition-transform hover:scale-105">
             <ShieldCheck className="w-9 h-9 text-brand-cyan" strokeWidth={2.2} />
           </div>
           <h1 className="text-2xl font-extrabold text-brand-navy tracking-tight">
@@ -19,19 +80,38 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        {/* Form Container */}
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200 shadow-glass p-8">
-          <div className="mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-brand-blue flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              Phase 3 Shell
-            </span>
-            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
-              Supabase Auth Ready
-            </span>
-          </div>
+        {/* Card Form */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-slate-200/80 shadow-glass p-8">
+          {/* Supabase Status Banner */}
+          {!isSupabaseConfigured ? (
+            <div className="mb-6 p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-start space-x-2.5 text-xs text-amber-800">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block">Supabase Connection Required</span>
+                Paste your project URL & anon key into <code className="bg-amber-100/70 px-1 py-0.5 rounded text-[11px]">.env</code> to enable live authentication.
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6 flex items-center justify-between pb-3 border-b border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Enterprise SSO Gate
+              </span>
+              <span className="inline-flex items-center space-x-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Supabase Auth Live</span>
+              </span>
+            </div>
+          )}
 
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="mb-6 p-3.5 bg-rose-50 border border-rose-200/80 rounded-2xl flex items-start space-x-2.5 text-xs text-rose-700 animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">{errorMessage}</div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-brand-navy uppercase tracking-wider mb-1.5">
                 Work Email Address
@@ -42,9 +122,11 @@ export const Login: React.FC = () => {
                 </div>
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@immenseair.in or name@zion.in"
                   className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-brand-navy placeholder:text-slate-400 transition-all"
-                  disabled
+                  required
                 />
               </div>
             </div>
@@ -56,7 +138,7 @@ export const Login: React.FC = () => {
                 </label>
                 <Link
                   to="/reset-password"
-                  className="text-xs font-medium text-brand-blue hover:underline"
+                  className="text-xs font-semibold text-brand-blue hover:text-brand-blueHover transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -66,28 +148,49 @@ export const Login: React.FC = () => {
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-brand-navy placeholder:text-slate-400 transition-all"
-                  disabled
+                  className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-brand-navy placeholder:text-slate-400 transition-all"
+                  required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
             <div className="pt-2">
-              <Link
-                to="/workspace"
-                className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-brand-navy hover:bg-brand-blue transition-all shadow-md active:scale-[0.99]"
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-brand-navy hover:bg-brand-blue transition-all shadow-md active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <span>Enter Workspace (Preview Shell)</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-cyan" />
+                    <span>Authenticating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign In to Workspace</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
             </div>
           </form>
 
-          <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
-            <span className="font-semibold block mb-0.5">Phase 3 Project Shell Note:</span>
-            Real Supabase authentication connection and credentials validation will be wired in Phase 5. No fake passwords or mock credentials are used.
+          <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+            <p className="text-[11px] text-slate-400">
+              Access is protected by Supabase Auth & PostgreSQL Row Level Security.
+            </p>
           </div>
         </div>
       </div>

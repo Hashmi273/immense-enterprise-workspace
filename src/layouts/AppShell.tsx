@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   ShieldCheck, 
   LayoutGrid, 
@@ -10,7 +11,9 @@ import {
   Building2, 
   Terminal, 
   FileText,
-  AlertOctagon
+  AlertOctagon,
+  User,
+  LogIn
 } from "lucide-react";
 
 interface AppShellProps {
@@ -20,12 +23,19 @@ interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, organization, role, signOut } = useAuth();
 
   const isAuthPage = location.pathname === "/login" || location.pathname === "/reset-password";
 
   if (isAuthPage) {
     return <div className="min-h-screen bg-brand-canvas flex flex-col">{children}</div>;
   }
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   const navItems = [
     { name: "Workspace", path: "/workspace", icon: LayoutGrid },
@@ -81,7 +91,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               })}
             </nav>
 
-            {/* Right Quick Controls */}
+            {/* Right User & Controls */}
             <div className="hidden md:flex items-center space-x-3">
               <Link
                 to="/access-denied"
@@ -91,13 +101,41 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 <AlertOctagon className="w-3.5 h-3.5" />
                 <span>Test 403</span>
               </Link>
-              <Link
-                to="/login"
-                className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:text-white bg-white/10 hover:bg-white/15 rounded-lg transition-colors border border-white/10"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign In / Out</span>
-              </Link>
+
+              {user && profile ? (
+                <div className="flex items-center space-x-3 pl-2 border-l border-white/10">
+                  <div className="text-right leading-tight">
+                    <div className="text-xs font-bold text-white truncate max-w-[140px]">
+                      {profile.fullName || user.email}
+                    </div>
+                    <div className="flex items-center justify-end space-x-1 mt-0.5">
+                      <span className="text-[10px] text-brand-cyan font-medium">
+                        {organization?.name || "Immense"}
+                      </span>
+                      <span className="text-[9px] bg-white/10 text-slate-300 px-1.5 py-0.2 rounded">
+                        {role?.name || "User"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="Sign Out"
+                    className="p-2 rounded-lg text-slate-300 hover:text-rose-300 hover:bg-white/10 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blueHover rounded-lg transition-colors shadow-sm"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </Link>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -116,7 +154,19 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
         {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden px-4 pt-2 pb-4 space-y-1 bg-brand-navy border-t border-white/10">
+          <div className="md:hidden px-4 pt-2 pb-4 space-y-2 bg-brand-navy border-t border-white/10">
+            {user && profile && (
+              <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center space-x-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-brand-blue flex items-center justify-center text-white">
+                  <User className="w-4 h-4" />
+                </div>
+                <div className="text-xs">
+                  <div className="font-bold text-white">{profile.fullName}</div>
+                  <div className="text-slate-300">{organization?.name} &middot; {role?.name}</div>
+                </div>
+              </div>
+            )}
+
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -134,15 +184,30 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </Link>
               );
             })}
+
             <div className="pt-2 border-t border-white/10">
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-slate-300 hover:text-white"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign In / Out</span>
-              </Link>
+              {user ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-rose-300 hover:text-rose-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm text-slate-300 hover:text-white"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -162,7 +227,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <div className="flex items-center space-x-4 text-slate-400">
             <span>Immense Air Pvt Ltd &middot; Zion</span>
             <span>&bull;</span>
-            <span className="text-brand-blue font-medium">Phase 3: Central Workspace Shell</span>
+            <span className="text-brand-blue font-medium">Phase 5: Supabase Auth & Session Protected</span>
           </div>
         </div>
       </footer>
