@@ -69,12 +69,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {/* Brand Logo */}
             <div className="flex items-center space-x-3">
               <Link to="/workspace" className="flex items-center space-x-3 group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center shadow-glow transition-transform duration-200 group-hover:scale-105">
-                  <ShieldCheck className="w-6 h-6 text-brand-navy" strokeWidth={2.2} />
+                <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md transition-transform duration-200 group-hover:scale-105 border border-white/20">
+                  <img 
+                    src="/immense-air-logo.jpg" 
+                    alt="Immense Air" 
+                    className="w-full h-full object-contain rounded-lg"
+                  />
                 </div>
                 <div>
                   <div className="flex items-center space-x-1.5">
-                    <span className="font-extrabold text-lg tracking-tight text-white">IMMENSE</span>
+                    <span className="font-extrabold text-lg tracking-tight text-white">IMMENSE AIR</span>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-blue/30 text-brand-cyan border border-brand-cyan/30">
                       WORKSPACE
                     </span>

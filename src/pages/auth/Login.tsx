@@ -70,8 +70,12 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Header Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-navy shadow-glow mb-4 transition-transform hover:scale-105">
-            <ShieldCheck className="w-9 h-9 text-brand-cyan" strokeWidth={2.2} />
+          <div className="inline-flex items-center justify-center p-2 rounded-2xl bg-white shadow-card mb-4 border border-slate-200/80 transition-transform hover:scale-105">
+            <img 
+              src="/immense-air-logo.jpg" 
+              alt="Immense Air Pvt Ltd" 
+              className="w-20 h-20 object-contain rounded-xl"
+            />
           </div>
           <h1 className="text-2xl font-extrabold text-brand-navy tracking-tight">
             Immense Enterprise Workspace

@@ -107,7 +107,7 @@ export const Launcher: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Personalized Welcome Banner */}
-      <div className="glass-card-navy text-white rounded-3xl p-8 sm:p-10 shadow-glow relative overflow-hidden border border-white/10">
+      <div className="glass-card-navy text-white rounded-3xl p-8 sm:p-10 shadow-glow relative overflow-hidden border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-brand-cyan/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute right-20 top-0 w-48 h-48 bg-brand-blue/20 rounded-full blur-2xl pointer-events-none" />
         
@@ -126,6 +126,16 @@ export const Launcher: React.FC = () => {
           <p className="mt-3 text-slate-300 text-sm sm:text-base leading-relaxed">
             Welcome to Immense Enterprise Workspace. Access to business applications is strictly governed by your authenticated organization and role assignment.
           </p>
+        </div>
+
+        <div className="relative z-10 hidden md:flex shrink-0 items-center justify-center">
+          <div className="w-24 h-24 rounded-2xl bg-white p-2 shadow-2xl border border-white/30 flex items-center justify-center">
+            <img 
+              src="/immense-air-logo.jpg" 
+              alt="Immense Air Pvt Ltd" 
+              className="w-full h-full object-contain rounded-xl"
+            />
+          </div>
         </div>
       </div>
 

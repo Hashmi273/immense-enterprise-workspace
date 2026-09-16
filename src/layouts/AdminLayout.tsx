@@ -46,6 +46,9 @@ export const AdminLayout: React.FC = () => {
                 Workspace
               </Link>
               <span className="text-slate-300">/</span>
+              <div className="w-7 h-7 rounded-lg bg-white p-0.5 border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
+                <img src="/immense-air-logo.jpg" alt="Immense Air" className="w-full h-full object-contain rounded-md" />
+              </div>
               <h1 className="text-2xl font-extrabold text-brand-navy tracking-tight">Admin Console</h1>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-navy text-brand-cyan border border-brand-cyan/20">
                 {role?.name || "Admin"}
