@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 export const Login: React.FC = () => {
-  const { signIn, accountDisabledError, user } = useAuth();
+  const { signIn, accountDisabledError, user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,13 +29,13 @@ export const Login: React.FC = () => {
     (location.state as any)?.error || accountDisabledError || null
   );
 
-  // If user is already authenticated, redirect to workspace
+  // If user and profile are already authenticated and loaded, redirect to workspace
   React.useEffect(() => {
-    if (user) {
+    if (user && profile && profile.isActive) {
       const destination = sanitizeInternalRedirect((location.state as any)?.from?.pathname);
       navigate(destination, { replace: true });
     }
-  }, [user, navigate, location]);
+  }, [user, profile, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -63,24 +63,24 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-brand-canvas flex flex-col selection:bg-brand-blue selection:text-white">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-brand-navy/95 backdrop-blur-md border-b border-white/10 text-white shadow-sm">
+      <header className="sticky top-0 z-40 bg-brand-navy/95 backdrop-blur-md border-b border-white/10 text-white shadow-sm font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16 gap-4">
             {/* Brand Logo */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center shrink-0">
               <Link to="/workspace" className="flex items-center space-x-3 group">
-                <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md transition-transform duration-200 group-hover:scale-105 border border-white/20">
+                <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md transition-transform duration-200 group-hover:scale-105 border border-white/20 shrink-0">
                   <img 
                     src="/immense-air-logo.jpg" 
                     alt="Immense Air" 
                     className="w-full h-full object-contain rounded-lg"
                   />
                 </div>
-                <div>
-                  <div className="flex items-center space-x-1.5">
-                    <span className="font-extrabold text-lg tracking-tight text-white">IMMENSE AIR</span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-blue/30 text-brand-cyan border border-brand-cyan/30">
-                      WORKSPACE
+                <div className="shrink-0">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold text-base tracking-tight text-white whitespace-nowrap">IMMENSE AIR</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-blue/30 text-brand-cyan border border-brand-cyan/30 uppercase tracking-wide">
+                      Workspace
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-300 tracking-wider uppercase font-medium">Enterprise Portal</p>
@@ -89,7 +89,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </div>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center space-x-1">
+            <nav className="hidden md:flex items-center space-x-1.5 overflow-x-auto py-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path || (item.path === "/admin" && location.pathname.startsWith("/admin"));
@@ -97,13 +97,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                       isActive
-                        ? "bg-brand-blue text-white shadow-sm"
-                        : "text-slate-300 hover:text-white hover:bg-white/5"
+                        ? "bg-brand-blue text-white shadow-sm font-semibold"
+                        : "text-slate-300 hover:text-white hover:bg-white/10"
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
                     <span>{item.name}</span>
                   </Link>
                 );
@@ -111,13 +111,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </nav>
 
             {/* Right User Controls & Profile */}
-            <div className="hidden md:flex items-center space-x-3">
+            <div className="hidden md:flex items-center space-x-2.5 shrink-0">
               <Link
                 to="/access-denied"
                 title="Test Access Denied Screen"
-                className="text-xs text-slate-400 hover:text-rose-300 flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 transition-colors"
+                className="text-xs text-slate-300 hover:text-white flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors whitespace-nowrap font-medium"
               >
-                <AlertOctagon className="w-3.5 h-3.5" />
+                <AlertOctagon className="w-3.5 h-3.5 text-slate-400" />
                 <span>Test 403</span>
               </Link>
 
@@ -126,20 +126,20 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center space-x-2.5 pl-2.5 pr-2 py-1.5 rounded-xl hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 text-left"
+                    className="flex items-center space-x-2 pl-2 pr-2.5 py-1 rounded-xl hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 text-left shrink-0"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center text-brand-navy font-bold text-xs">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center text-brand-navy font-bold text-xs shrink-0">
                       {profile.fullName ? profile.fullName.charAt(0).toUpperCase() : "U"}
                     </div>
-                    <div className="leading-tight">
-                      <div className="text-xs font-bold text-white truncate max-w-[130px]">
+                    <div className="leading-tight text-left">
+                      <div className="text-xs font-semibold text-white whitespace-nowrap">
                         {profile.fullName || user.email}
                       </div>
-                      <div className="text-[10px] text-brand-cyan font-medium">
+                      <div className="text-[10px] text-brand-cyan font-normal whitespace-nowrap">
                         {organization?.name || "Immense"} &middot; {role?.name}
                       </div>
                     </div>
-                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${userDropdownOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${userDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
                   {/* Dropdown Menu */}

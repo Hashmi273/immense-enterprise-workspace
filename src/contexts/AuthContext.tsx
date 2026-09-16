@@ -61,8 +61,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           is_active,
           created_at,
           updated_at,
-          organizations:organization_id (id, name, slug, created_at),
-          roles:role_id (id, name, description, created_at)
+          organizations (id, name, slug, created_at),
+          roles (id, name, description, created_at)
         `)
         .eq("id", authUser.id)
         .single();
@@ -101,8 +101,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setAccountDisabledError(null);
 
-      const orgData = Array.isArray(data.organizations) ? data.organizations[0] : data.organizations;
-      const roleData = Array.isArray(data.roles) ? data.roles[0] : data.roles;
+      let orgData: any = Array.isArray(data.organizations) ? data.organizations[0] : data.organizations;
+      if (!orgData && data.organization_id) {
+        const { data: directOrg } = await supabase
+          .from("organizations")
+          .select("id, name, slug, created_at")
+          .eq("id", data.organization_id)
+          .single();
+        orgData = directOrg;
+      }
+
+      let roleData: any = Array.isArray(data.roles) ? data.roles[0] : data.roles;
+      if (!roleData && data.role_id) {
+        const { data: directRole } = await supabase
+          .from("roles")
+          .select("id, name, description, created_at")
+          .eq("id", data.role_id)
+          .single();
+        roleData = directRole;
+      }
 
       const loadedOrg: Organization | null = orgData
         ? {
