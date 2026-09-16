@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { logAuditEvent } from "@/lib/audit";
 import { AlertTriangle, ArrowLeft, ShieldAlert, Building2, User } from "lucide-react";
 
 export const AccessDenied: React.FC = () => {
@@ -8,6 +9,26 @@ export const AccessDenied: React.FC = () => {
   const location = useLocation();
   const reason = (location.state as any)?.reason;
   const attemptedPath = (location.state as any)?.path;
+  const loggedRef = useRef(false);
+
+  useEffect(() => {
+    if (!loggedRef.current && attemptedPath) {
+      loggedRef.current = true;
+      logAuditEvent({
+        action: "ACCESS_DENIED",
+        userId: user?.id,
+        organizationId: organization?.id,
+        targetType: "ROUTE",
+        targetId: attemptedPath,
+        metadata: {
+          attemptedPath,
+          reason: reason || "Unauthorized route access",
+          userEmail: profile?.email || user?.email,
+          role: role?.name,
+        },
+      });
+    }
+  }, [attemptedPath, reason, user?.id, organization?.id, profile?.email, user?.email, role?.name]);
 
   return (
     <div className="max-w-xl mx-auto py-12 px-4 text-center">
