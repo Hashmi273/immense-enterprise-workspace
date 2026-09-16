@@ -90,10 +90,19 @@ export const quotationService = {
       let resultId = existingId;
 
       if (isUpdate && existingId) {
-        // UPDATE existing record
+        // UPDATE existing record: omit organization_id, created_by, and id to enforce immutable ownership
+        const updatePayload = {
+          quotation_number: quotation.client.proposalNumber.trim(),
+          client_name: quotation.client.clientName.trim(),
+          client_company: quotation.client.companyName.trim() || quotation.client.clientName.trim(),
+          quotation_data: quotation,
+          status: status,
+          updated_at: now,
+        };
+
         const { error } = await supabase
           .from("quotations")
-          .update(payload)
+          .update(updatePayload)
           .eq("id", existingId);
 
         if (error) {
