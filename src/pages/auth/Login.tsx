@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { sanitizeInternalRedirect } from "@/lib/security";
 import { 
   ShieldCheck, 
   Lock, 
@@ -31,7 +32,7 @@ export const Login: React.FC = () => {
   // If user is already authenticated, redirect to workspace
   React.useEffect(() => {
     if (user) {
-      const destination = (location.state as any)?.from?.pathname || "/workspace";
+      const destination = sanitizeInternalRedirect((location.state as any)?.from?.pathname);
       navigate(destination, { replace: true });
     }
   }, [user, navigate, location]);
@@ -59,7 +60,7 @@ export const Login: React.FC = () => {
       setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
       setSubmitting(false);
     } else {
-      const destination = (location.state as any)?.from?.pathname || "/workspace";
+      const destination = sanitizeInternalRedirect((location.state as any)?.from?.pathname);
       navigate(destination, { replace: true });
     }
   };
