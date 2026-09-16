@@ -9,6 +9,7 @@ import { ErrorHubPlaceholder } from "@/pages/apps/ErrorHubPlaceholder";
 import { ImmenseQuotesPlaceholder } from "@/pages/apps/ImmenseQuotesPlaceholder";
 import { ZionQuotesPlaceholder } from "@/pages/apps/ZionQuotesPlaceholder";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AuthorizedRoute } from "@/components/auth/AuthorizedRoute";
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -18,7 +19,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/access-denied" element={<AccessDenied />} />
 
-      {/* Main Protected Workspace Routes */}
+      {/* Main Workspace (Any authenticated, active user) */}
       <Route
         path="/"
         element={
@@ -36,39 +37,39 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Protected Admin Console Route */}
+      {/* Admin Console Route (Admin & Super Admin only) */}
       <Route
         path="/admin"
         element={
-          <ProtectedRoute>
+          <AuthorizedRoute adminOnly>
             <AdminDashboard />
-          </ProtectedRoute>
+          </AuthorizedRoute>
         }
       />
 
-      {/* Protected Application Routes */}
+      {/* Authorized Application Routes (Enforcing RBAC + Org Boundaries) */}
       <Route
         path="/apps/error-hub"
         element={
-          <ProtectedRoute>
+          <AuthorizedRoute requiredAppSlug="error-hub">
             <ErrorHubPlaceholder />
-          </ProtectedRoute>
+          </AuthorizedRoute>
         }
       />
       <Route
         path="/apps/immense-quotes"
         element={
-          <ProtectedRoute>
+          <AuthorizedRoute requiredAppSlug="immense-quotes">
             <ImmenseQuotesPlaceholder />
-          </ProtectedRoute>
+          </AuthorizedRoute>
         }
       />
       <Route
         path="/apps/zion-quotes"
         element={
-          <ProtectedRoute>
+          <AuthorizedRoute requiredAppSlug="zion-quotes">
             <ZionQuotesPlaceholder />
-          </ProtectedRoute>
+          </AuthorizedRoute>
         }
       />
 

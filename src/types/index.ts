@@ -1,4 +1,4 @@
-export type OrganizationSlug = "immense-air" | "zion";
+export type OrganizationSlug = "immense-air" | "zion" | "central";
 
 export interface Organization {
   id: string;

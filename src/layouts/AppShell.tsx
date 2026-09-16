@@ -10,7 +10,7 @@ import {
   X, 
   Building2, 
   Terminal, 
-  FileText,
+  FileText, 
   AlertOctagon,
   User,
   LogIn
@@ -24,7 +24,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, organization, role, signOut } = useAuth();
+  const { user, profile, organization, role, isAdmin, canAccessApp, signOut } = useAuth();
 
   const isAuthPage = location.pathname === "/login" || location.pathname === "/reset-password";
 
@@ -37,13 +37,25 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     navigate("/login");
   };
 
-  const navItems = [
+  // Dynamically assemble navigation items based on user's authorized access
+  const navItems: Array<{ name: string; path: string; icon: any }> = [
     { name: "Workspace", path: "/workspace", icon: LayoutGrid },
-    { name: "Error Hub", path: "/apps/error-hub", icon: Terminal },
-    { name: "Immense Quotes", path: "/apps/immense-quotes", icon: FileText },
-    { name: "Zion Quotes", path: "/apps/zion-quotes", icon: Building2 },
-    { name: "Admin Console", path: "/admin", icon: Settings },
   ];
+
+  if (user && profile) {
+    if (canAccessApp("error-hub")) {
+      navItems.push({ name: "Error Hub", path: "/apps/error-hub", icon: Terminal });
+    }
+    if (canAccessApp("immense-quotes")) {
+      navItems.push({ name: "Immense Quotes", path: "/apps/immense-quotes", icon: FileText });
+    }
+    if (canAccessApp("zion-quotes")) {
+      navItems.push({ name: "Zion Quotes", path: "/apps/zion-quotes", icon: Building2 });
+    }
+    if (isAdmin) {
+      navItems.push({ name: "Admin Console", path: "/admin", icon: Settings });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-brand-canvas flex flex-col selection:bg-brand-blue selection:text-white">
@@ -227,7 +239,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <div className="flex items-center space-x-4 text-slate-400">
             <span>Immense Air Pvt Ltd &middot; Zion</span>
             <span>&bull;</span>
-            <span className="text-brand-blue font-medium">Phase 5: Supabase Auth & Session Protected</span>
+            <span className="text-brand-blue font-medium">Phase 6: RBAC & Permission Engine Active</span>
           </div>
         </div>
       </footer>

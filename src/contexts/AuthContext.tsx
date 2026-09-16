@@ -1,16 +1,30 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { UserProfile, Organization, Role } from "@/types";
+import { UserProfile, Organization, Role, AppSlug, UserApplication } from "@/types";
 import { logAuditEvent } from "@/lib/audit";
+import { 
+  canAccessApplication, 
+  hasPermission as checkPermission, 
+  canAccessRoute as checkRoute,
+  isAdmin as checkIsAdmin,
+  isSuperAdmin as checkIsSuperAdmin
+} from "@/lib/authorization";
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   organization: Organization | null;
   role: Role | null;
+  permissions: string[];
+  userApplications: UserApplication[];
   loading: boolean;
   accountDisabledError: string | null;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  hasPermission: (code: string) => boolean;
+  canAccessApp: (slug: AppSlug) => boolean;
+  canAccessRoute: (route: string) => boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -25,12 +39,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [role, setRole] = useState<Role | null>(null);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [userApplications, setUserApplications] = useState<UserApplication[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [accountDisabledError, setAccountDisabledError] = useState<string | null>(null);
 
   /**
-   * Fetches user profile, organization, and role strictly from the PostgreSQL database.
-   * Frontend state is derived exclusively from the authoritative database record.
+   * Fetches user profile, organization, role, permissions, and application overrides
+   * strictly from the authoritative Supabase PostgreSQL database.
    */
   const fetchUserProfile = useCallback(async (authUser: User): Promise<boolean> => {
     try {
@@ -56,12 +72,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(null);
         setOrganization(null);
         setRole(null);
+        setPermissions([]);
+        setUserApplications([]);
         return false;
       }
 
-      // Check Inactive Account Status: Enforce strict database-driven access blocking
+      // Inactive user quarantine check
       if (!data.is_active) {
-        console.warn("[Auth] Inactive user detected. Blocking workspace access.");
+        console.warn("[Auth] Inactive account detected in database.");
         setAccountDisabledError(
           "Your account has been deactivated by an enterprise administrator. Contact support@immenseair.in."
         );
@@ -69,17 +87,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           action: "USER_BLOCKED_INACTIVE",
           userId: authUser.id,
           organizationId: data.organization_id,
-          metadata: { email: authUser.email, reason: "Account is inactive in profiles table" },
+          metadata: { email: authUser.email, reason: "Account is marked inactive in profiles" },
         });
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
         setOrganization(null);
         setRole(null);
+        setPermissions([]);
+        setUserApplications([]);
         return false;
       }
 
-      // Clear any prior disabled error
       setAccountDisabledError(null);
 
       const orgData = Array.isArray(data.organizations) ? data.organizations[0] : data.organizations;
@@ -103,6 +122,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         : null;
 
+      // Fetch granular permissions mapped to this role
+      let loadedPerms: string[] = [];
+      try {
+        const { data: permData } = await supabase
+          .from("role_permissions")
+          .select("permissions (code)")
+          .eq("role_id", data.role_id);
+
+        if (permData) {
+          loadedPerms = permData
+            .map((item: any) => item.permissions?.code)
+            .filter(Boolean);
+        }
+      } catch (pErr) {
+        console.warn("[Auth] Non-fatal: could not query role_permissions:", pErr);
+      }
+
+      // Fetch individual user application overrides
+      let loadedUserApps: UserApplication[] = [];
+      try {
+        const { data: userAppsData } = await supabase
+          .from("user_applications")
+          .select("id, user_id, application_id, granted_by, created_at, applications (slug)")
+          .eq("user_id", authUser.id);
+
+        if (userAppsData) {
+          loadedUserApps = userAppsData.map((ua: any) => ({
+            id: ua.id,
+            userId: ua.user_id,
+            applicationId: ua.applications?.slug || ua.application_id,
+            grantedBy: ua.granted_by,
+            createdAt: ua.created_at,
+          }));
+        }
+      } catch (uaErr) {
+        console.warn("[Auth] Non-fatal: could not query user_applications:", uaErr);
+      }
+
       const userProfile: UserProfile = {
         id: data.id,
         fullName: data.full_name,
@@ -119,6 +176,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(userProfile);
       setOrganization(loadedOrg);
       setRole(loadedRole);
+      setPermissions(loadedPerms);
+      setUserApplications(loadedUserApps);
       return true;
     } catch (err) {
       console.error("[Auth] Unexpected error loading profile:", err);
@@ -126,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Initialize session and attach persistent auth listener
+  // Initialize session and auth listener
   useEffect(() => {
     let mounted = true;
 
@@ -151,7 +210,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    // Listen for auth state changes (login, logout, token refresh, password recovery)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session: Session | null) => {
         if (!mounted) return;
@@ -166,6 +224,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
           setOrganization(null);
           setRole(null);
+          setPermissions([]);
+          setUserApplications([]);
           setLoading(false);
         } else if (event === "USER_UPDATED" && session?.user) {
           setUser(session.user);
@@ -210,6 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await logAuditEvent({
           action: "LOGIN_SUCCESS",
           userId: data.user.id,
+          organizationId: data.user.user_metadata?.organization_id,
           metadata: { email: data.user.email },
         });
       }
@@ -238,6 +299,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       setOrganization(null);
       setRole(null);
+      setPermissions([]);
+      setUserApplications([]);
       setAccountDisabledError(null);
     }
   };
@@ -287,6 +350,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Helper bindings to centralized authorization engine
+  const hasPerm = (code: string) => checkPermission(profile, role, permissions, code);
+  const canApp = (slug: AppSlug) => canAccessApplication(profile, organization, role, slug, userApplications, permissions);
+  const canRoute = (route: string) => checkRoute(profile, organization, role, route, userApplications, permissions);
+  const isAdmin = checkIsAdmin(role);
+  const isSuperAdmin = checkIsSuperAdmin(role);
+
   return (
     <AuthContext.Provider
       value={{
@@ -294,8 +364,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         organization,
         role,
+        permissions,
+        userApplications,
         loading,
         accountDisabledError,
+        isAdmin,
+        isSuperAdmin,
+        hasPermission: hasPerm,
+        canAccessApp: canApp,
+        canAccessRoute: canRoute,
         signIn,
         signOut,
         resetPassword,
